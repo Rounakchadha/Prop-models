@@ -19,3 +19,7 @@ stanio==0.5.1
 tqdm==4.67.1
 tzdata==2025.2
 gunicorn
+Flask
+folium
+scikit-learn
+joblib
