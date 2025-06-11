@@ -1,0 +1,48 @@
+<!-- Add this section after the existing expense section -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Detailed Expense Breakdown</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value">₹{{ analysis.maintenance_breakdown.basic_maintenance }}</div>
+                    <div class="metric-label">Basic Maintenance</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value">₹{{ analysis.maintenance_breakdown.society_maintenance }}</div>
+                    <div class="metric-label">Society Maintenance</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value">₹{{ analysis.maintenance_breakdown.property_tax }}</div>
+                    <div class="metric-label">Property Tax</div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value">₹{{ analysis.maintenance_breakdown.insurance }}</div>
+                    <div class="metric-label">Insurance</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value">₹{{ analysis.maintenance_breakdown.vacancy_allowance }}</div>
+                    <div class="metric-label">Vacancy Allowance</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-card">
+                    <div class="metric-value text-primary">₹{{ analysis.total_monthly_expenses }}</div>
+                    <div class="metric-label">Total Monthly Expenses</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

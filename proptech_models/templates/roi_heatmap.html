@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}ROI Heatmap - PropTech ML Platform{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-fire me-2"></i>ROI Heatmap - Locality Performance
+                </h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Explore ROI performance across different localities. Higher ROI areas are highlighted in warmer colors.
+                </p>
+                
+                <!-- Filter Controls -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <label for="sortBy" class="form-label">Sort By:</label>
+                        <select class="form-select" id="sortBy" onchange="sortHeatmapData()">
+                            <option value="roi">ROI (High to Low)</option>
+                            <option value="price">Price (Low to High)</option>
+                            <option value="rent">Rent (High to Low)</option>
+                            <option value="name">Name (A to Z)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="minROI" class="form-label">Minimum ROI (%):</label>
+                        <input type="range" class="form-range" id="minROI" min="0" max="20" value="0" 
+                               oninput="filterHeatmapData()" onchange="updateROILabel()">
+                        <small class="text-muted">Min ROI: <span id="roiLabel">0</span>%</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchLocality" class="form-label">Search Locality:</label>
+                        <input type="text" class="form-control" id="searchLocality" 
+                               placeholder="Type to search..." oninput="searchLocalities()">
+                    </div>
+                </div>
+
+                <!-- Heatmap Grid -->
+                <div id="heatmapContainer">
+                    <div class="row" id="heatmapGrid">
+                        {% for item in heatmap_data %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3 heatmap-item" 
+                             data-roi="{{ item.avg_roi }}" 
+                             data-price="{{ item.avg_price }}" 
+                             data-rent="{{ item.avg_rent }}"
+                             data-name="{{ item.locality.lower() }}">
+                            <div class="card heatmap-card" 
+                                 style="background: linear-gradient(135deg, 
+                                    {% if item.avg_roi >= 10 %}#e74c3c, #c0392b
+                                    {% elif item.avg_roi >= 8 %}#f39c12, #e67e22
+                                    {% elif item.avg_roi >= 6 %}#f1c40f, #f39c12
+                                    {% elif item.avg_roi >= 4 %}#2ecc71, #27ae60
+                                    {% else %}#3498db, #2980b9{% endif %});">
+                                <div class="card-body text-white text-center p-3">
+                                    <h6 class="card-title mb-2">{{ item.locality }}</h6>
+                                    <div class="row">
+                                        <div class="col-12 mb-2">
+                                            <div class="h4 mb-0">{{ item.avg_roi }}%</div>
+                                            <small>ROI</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="fw-bold">₹{{ item.avg_price }}L</div>
+                                            <small>Price</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="fw-bold">₹{{ item.avg_rent }}</div>
+                                            <small>Rent</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h6><i class="fas fa-palette me-2"></i>ROI Color Legend</h6>
+                        <div class="row text-center">
+                            <div class="col">
+                                <div class="p-2 text-white" style="background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 5px;">
+                                    <strong>10%+ ROI</strong><br>
+                                    <small>Excellent</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 text-white" style="background: linear-gradient(135deg, #f39c12, #e67e22); border-radius: 5px;">
+                                    <strong>8-10% ROI</strong><br>
+                                    <small>Very Good</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 text-white" style="background: linear-gradient(135deg, #f1c40f, #f39c12); border-radius: 5px;">
+                                    <strong>6-8% ROI</strong><br>
+                                    <small>Good</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 text-white" style="background: linear-gradient(135deg, #2ecc71, #27ae60); border-radius: 5px;">
+                                    <strong>4-6% ROI</strong><br>
+                                    <small>Average</small>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="p-2 text-white" style="background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 5px;">
+                                    <strong>Below 4%</strong><br>
+                                    <small>Low</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Statistics -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-pie me-2"></i>Summary Statistics</h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="summaryChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Store original heatmap data
+const originalHeatmapData = {{ heatmap_data | tojsonfilter }};
+let currentHeatmapData = [...originalHeatmapData];
+
+// Sort heatmap data
+function sortHeatmapData() {
+    const sortBy = document.getElementById('sortBy').value;
+    
+    currentHeatmapData.sort((a, b) => {
+        switch(sortBy) {
+            case 'roi':
+                return b.avg_roi - a.avg_roi;
+            case 'price':
+                return a.avg_price - b.avg_price;
+            case 'rent':
+                return b.avg_rent - a.avg_rent;
+            case 'name':
+                return a.locality.localeCompare(b.locality);
+            default:
+                return 0;
+        }
+    });
+    
+    renderHeatmap();
+}
+
+// Filter by minimum ROI
+function filterHeatmapData() {
+    const minROI = parseFloat(document.getElementById('minROI').value);
+    const searchTerm = document.getElementById('searchLocality').value.toLowerCase();
+    
+    const items = document.querySelectorAll('.heatmap-item');
+    items.forEach(item => {
+        const roi = parseFloat(item.dataset.roi);
+        const name = item.dataset.name;
+        
+        const roiMatch = roi >= minROI;
+        const nameMatch = name.includes(searchTerm);
+        
+        if (roiMatch && nameMatch) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Search localities
+function searchLocalities() {
+    filterHeatmapData();
+}
+
+// Update ROI label
+function updateROILabel() {
+    const minROI = document.getElementById('minROI').value;
+    document.getElementById('roiLabel').textContent = minROI;
+}
+
+// Render heatmap (for sorting)
+function renderHeatmap() {
+    const container = document.getElementById('heatmapGrid');
+    container.innerHTML = '';
+    
+    currentHeatmapData.forEach(item => {
+        const roiColor = item.avg_roi >= 10 ? '#e74c3c, #c0392b' :
+                        item.avg_roi >= 8 ? '#f39c12, #e67e22' :
+                        item.avg_roi >= 6 ? '#f1c40f, #f39c12' :
+                        item.avg_roi >= 4 ? '#2ecc71, #27ae60' : '#3498db, #2980b9';
+        
+        const cardHtml = `
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-3 heatmap-item" 
+                 data-roi="${item.avg_roi}" 
+                 data-price="${item.avg_price}" 
+                 data-rent="${item.avg_rent}"
+                 data-name="${item.locality.toLowerCase()}">
+                <div class="card heatmap-card" 
+                     style="background: linear-gradient(135deg, ${roiColor});">
+                    <div class="card-body text-white text-center p-3">
+                        <h6 class="card-title mb-2">${item.locality}</h6>
+                        <div class="row">
+                            <div class="col-12 mb-2">
+                                <div class="h4 mb-0">${item.avg_roi}%</div>
+                                <small>ROI</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="fw-bold">₹${item.avg_price}L</div>
+                                <small>Price</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="fw-bold">₹${item.avg_rent}</div>
+                                <small>Rent</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.innerHTML += cardHtml;
+    });
+}
+
+// Summary Chart
+const summaryCtx = document.getElementById('summaryChart').getContext('2d');
+
+// Calculate ROI distribution
+const roiRanges = {
+    'Excellent (10%+)': 0,
+    'Very Good (8-10%)': 0,
+    'Good (6-8%)': 0,
+    'Average (4-6%)': 0,
+    'Low (<4%)': 0
+};
+
+originalHeatmapData.forEach(item => {
+    if (item.avg_roi >= 10) roiRanges['Excellent (10%+)']++;
+    else if (item.avg_roi >= 8) roiRanges['Very Good (8-10%)']++;
+    else if (item.avg_roi >= 6) roiRanges['Good (6-8%)']++;
+    else if (item.avg_roi >= 4) roiRanges['Average (4-6%)']++;
+    else roiRanges['Low (<4%)']++;
+});
+
+new Chart(summaryCtx, {
+    type: 'doughnut',
+    data: {
+        labels: Object.keys(roiRanges),
+        datasets: [{
+            data: Object.values(roiRanges),
+            backgroundColor: ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom',
+            },
+            title: {
+                display: true,
+                text: 'ROI Distribution Across Localities'
+            }
+        }
+    }
+});
+
+// Add click handlers to heatmap cards
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.heatmap-card')) {
+        const card = e.target.closest('.heatmap-item');
+        const locality = card.dataset.name;
+        
+        // You can add functionality here to show more details or navigate
+        console.log('Clicked on locality:', locality);
+    }
+});
+</script>
+{% endblock %}
